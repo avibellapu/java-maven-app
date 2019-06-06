@@ -1,0 +1,27 @@
+#!/usr/bin/env groovy
+
+node {
+  def app
+
+  stage("Clone") {
+    git 'https://github.com/avibellapu/java-maven-app.git'
+  }
+
+  stage("Build") {
+    app = docker.build("avibellapu/java-maven-app")
+  }
+
+  stage("Push") {
+    docker.withRegistry("https://registry.hub.docker.com", "docker-hub-credentials") {
+      app.push("${env.BUILD_ID}")
+      app.push("latest")
+    }
+  }
+
+  stage("Deploy") {
+    sh "ssh root@34.66.11.149  \"docker stop ast_0 && \
+        docker rm ast_0 && \
+        docker pull avibellapu/java-maven-app:latest && \
+        docker run -d --name=ast_0 -p 8080:80 avibellapu/java-maven-app:latest\""
+  }
+}
